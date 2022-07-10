@@ -14,11 +14,11 @@
 <script>
     let url = window.location.href;     // create a variable with the current url
     url = url.substring(url.lastIndexOf('/') + 1); // get the raw image name
-    const url2 = "http://localhost:3000/raw/" + url; // make a second variable with the link to the actual image
+    const url2 = "http://localhost/raw/" + url; // make a second variable with the link to the actual image
     const image = document.createElement("img");
     const link = document.createElement("a");
     image.src = url2; // add the image source
-    link.href = "http://localhost:3000/raw/" + url; // add image link
+    link.href = "http://localhost/raw/" + url; // add image link
     link.id = "imageLink"
     link.target = "_blank";
     document.getElementById("imageContainer").appendChild(link); 

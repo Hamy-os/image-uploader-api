@@ -5,9 +5,9 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const _ = require('lodash');
-const port = 3000;
+const port = 80;
 const fs = require('fs');
-const baseurl = "http://localhost:3000/server/uploads/";
+const baseurl = "http://localhost:80/uploads/";
 
 // enable files upload
 app.use(fileUpload(
@@ -26,7 +26,7 @@ app.listen(port, () =>
     console.log(`App is listening on port ${port}. http://localhost:${port}`)
 );
 
-app.post('/api/upload', async (req, res) => {
+app.post('/upload', async (req, res) => {
     try {
         if(!req.files) {
             res.status(400).send('No files were uploaded.'); // send a 400 error with a message if no file is uploaded
@@ -39,7 +39,7 @@ app.post('/api/upload', async (req, res) => {
             fs.open('./uploads/' + name, 'r', (err, fd) => {
                 if (err) {
                     if (err.code === 'ENOENT') {
-                        fs.writeFileSync('./uploads/' + name, image); // create the file
+                        fs.writeFileSync(`./uploads/${name}`, image); // create the file
                         res.status(200).send(baseurl + name); //send response with the url and the status code
                         return;
                     }
@@ -48,7 +48,7 @@ app.post('/api/upload', async (req, res) => {
                 try {
                     const filename2 = _.random(100000000, 999999999).toString(); // create a random 8 digit filename
                     const name2 = filename2 + '.' + extension // combine the two
-                    fs.writeFileSync('./uploads/' + name2, image); // create the file
+                    fs.writeFileSync(`./uploads/${name2}`, image); // create the file
                     res.status(200).send(baseurl + name2); //send response with the url and the status code
                 } finally {
                     fs.close(fd, (err) => {
@@ -64,16 +64,13 @@ app.post('/api/upload', async (req, res) => {
     }
 });
 
-// make a get route to /server/uploads/:name that serves the image with the corresponding name
-app.get('/server/uploads/:name', (req, res) => {
-    const name = req.params.name;
-    const image = fs.readFileSync('./uploads/' + name);
+// make a get route to /uploads/:name that serves the image with the corresponding name
+app.get('/uploads/:name', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
 app.get('/raw/:name', (req, res) => {
     const name = req.params.name;
-    const image = fs.readFileSync('./uploads/' + name);
     res.sendFile(__dirname + `/uploads/${name}`);
 });
 
@@ -98,7 +95,7 @@ app.get('/list', (req, res) => {
 });
 
 // make a post route that deletes the image with the corresponding name
-app.post('/api/delete', (req, res) => {
+app.post('/delete', (req, res) => {
     const name = req.body.name;
     fs.unlink('./uploads/' + name, (err) => {
         if (err) {
