@@ -12,7 +12,7 @@ Let's see if i've learnt enough to make one :)
 ## TODO ( for now )
 
 - [X] Create a POST route /api/upload that accepts a file and returns the image url
-- [ ] Make sure a file can't have the same name as an existing file
+- [X] Make sure a file can't have the same name as an existing file
 - [X] Create a GET route /server/uploads/:filename that returns a html file with the image
 - [X] Create a GET route /raw/:filename that returns the actual image
 - [ ] Create a POST route /api/delete that accepts a url and deletes the image
