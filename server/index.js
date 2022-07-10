@@ -45,3 +45,16 @@ app.post('/api/upload', async (req, res) => {
         res.status(500).send(err); // send the error back with the status code
     }
 });
+
+// make a get route to /server/uploads/:name that serves the image with the corresponding name
+app.get('/server/uploads/:name', (req, res) => {
+    const name = req.params.name;
+    const image = fs.readFileSync('./uploads/' + name);
+    res.sendFile(__dirname + '/index.html');
+});
+
+app.get('/raw/:name', (req, res) => {
+    const name = req.params.name;
+    const image = fs.readFileSync('./uploads/' + name);
+    res.sendFile(__dirname + `/uploads/${name}`);
+});
