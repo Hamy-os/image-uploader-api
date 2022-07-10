@@ -96,3 +96,17 @@ app.get('/list', (req, res) => {
         }
     })
 });
+
+// make a post route that deletes the image with the corresponding name
+app.post('/api/delete', (req, res) => {
+    const name = req.body.name;
+    fs.unlink('./uploads/' + name, (err) => {
+        if (err) {
+            res.status(400).send('No such file, make sure you included the extension. ex: 400718604.png');
+        } else {
+            res.status(200).send('File deleted');
+        }
+    }
+    );
+}
+);
