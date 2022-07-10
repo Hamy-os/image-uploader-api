@@ -76,3 +76,23 @@ app.get('/raw/:name', (req, res) => {
     const image = fs.readFileSync('./uploads/' + name);
     res.sendFile(__dirname + `/uploads/${name}`);
 });
+
+app.get('/list', (req, res) => {
+    // return a json of every file in the uploads directory, their name, their size and their url
+    fs.readdir('./uploads', (err, files) => {
+        if (err) {
+            res.status(500).send(err);
+        } else {
+            const images = files.map(file => {
+                return {
+                    name: file,
+                    size: fs.statSync(`./uploads/${file}`).size,
+                    url: baseurl + file
+                }
+            }).sort((a, b) => {
+                return a.name > b.name;
+            }).reverse();
+            res.json(images);
+        }
+    })
+});
