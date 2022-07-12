@@ -70,7 +70,6 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
-
 app.listen(port, () => console.log(`App is listening on port ${port}.`));
 
 app.post('/upload', async (req, res) => {
@@ -136,28 +135,35 @@ app.get('/raw/:name', (req, res) => {
 });
 
 app.get('/list', (req, res) => { // return a json of every file in the uploads directory, their name, their size and their url
-    
-    fs.readdir('./uploads', (err, files) => {
-        if (err) {
-            res.status(500).send(err);
-        } else {
-            const images = files.map(file => {
-                return {
-                    name: file,
-                    size: fs.statSync(`./uploads/${file}`).size,
-                    url: baseurl + file
-                }
-            }).sort((a, b) => {
-                return a.name > b.name;
-            }).reverse();
-            res.json(images);
-        }
-    })
+    const adminKey = req.body.adminKey;
+    if (adminKey === process.env.adminKey) {
+        fs.readdir('./uploads', (err, files) => {
+            if (err) {
+                res.status(500).send(err);
+            } else {
+                const images = files.map(file => {
+                    return {
+                        name: file,
+                        size: fs.statSync(`./uploads/${file}`).size,
+                        url: baseurl + file
+                    }
+                }).sort((a, b) => {
+                    return a.name > b.name;
+                }).reverse();
+                res.json(images);
+            }
+        })
+    }
+    else {
+        // list the images owned by the api key
+        res.status(200).send("WIP feature");
+    }
 });
 
 // make a post route that deletes the image with the corresponding name
 app.post('/delete', (req, res) => {
     const name = req.body.name;
+    //TODO: check if the api key owns the image
     fs.unlink('./uploads/' + name, (err) => {
         if (err) {
             res.status(400).send('No such file, make sure you included the extension. ex: 400718604.png');
@@ -175,7 +181,7 @@ app.post('/admin/createApikey', (req, res) => {
     const str1 = _.random(1000000000000000000, 9999999999999999999).toString();
     const str2 = _.shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789').slice(0, 10).join('');
     const apiKey = str1 + str2;
-    if (adminKey === 'admin') {
+    if (adminKey === process.env.adminKey) {
         if (! username || ! email) {
             res.status(400).send('No username or email provided');
         }
@@ -189,29 +195,34 @@ app.post('/admin/createApikey', (req, res) => {
             createUser(apiKey, email, username, adminKey);
         }
     } else {
-        res.status(400).send('Invalid admin key');
+        res.status(403).send('Invalid admin key');
     }
 })
 
 // Create a GET route /admin/listKeys that lists every api key, who owns it and when it was created.
 app.get('/admin/listKeys', (req, res) => {
-    usersDb.get().then(snapshot => {
-        const users = snapshot.docs.map(doc => {
-            return {id: doc.id, data: doc.data()}
-        }).sort((a, b) => {
-            return a.data.dateAdded > b.data.dateAdded;
-        }).reverse();
-        res.json(users);
-    }).catch(err => {
-        res.status(500).send(err);
-    });
+    if (req.body.adminKey === process.env.adminKey) {
+        usersDb.get().then(snapshot => {
+            const users = snapshot.docs.map(doc => {
+                return {id: doc.id, data: doc.data()}
+            }).sort((a, b) => {
+                return a.data.dateAdded > b.data.dateAdded;
+            }).reverse();
+            res.json(users);
+        }).catch(err => {
+            res.status(500).send(err);
+        });
+    }
+    else {
+        res.status(403).send('Invalid admin key');
+    }
 })
 
 // Create a POST route /admin/deleteKey that takes a api key and deletes it from the database (firestore)
 app.post('/admin/deleteKey', (req, res) => {
     const adminKey = req.body.adminKey;
     const apiKey = req.body.apiKey;
-    if (adminKey === 'admin') {
+    if (adminKey === process.env.adminKey) {
         if (! apiKey || apiKey === '') {
             res.status(400).send('No api key provided');
         } else {
@@ -222,6 +233,6 @@ app.post('/admin/deleteKey', (req, res) => {
             });
         }
     } else {
-        res.status(400).send('Invalid admin key');
+        res.status(403).send('Invalid admin key');
     }
 });
