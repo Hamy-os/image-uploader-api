@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const fileUpload = require('express-fileupload');
 const cors = require('cors');
+const path = require('path');
 const bodyParser = require('body-parser');
 require('dotenv').config()
 const morgan = require('morgan');
@@ -86,8 +87,7 @@ app.post('/upload', async (req, res) => {
                     const buffer = req.files.file.data; // save the buffer as an image
                     const image = Buffer.from(buffer, 'base64'); // convert the buffer to an image
                     const filename = _.random(100000000, 999999999).toString(); // create a random 8 digit filename
-                    const extension = req.files.file.name.split('.').pop(); // add the extension to the filename
-                    const name = filename + '.' + extension // combine the two
+                    const name = filename + path.extname(req.files.file.name) // combine the two
                     fs.open('./uploads/' + name, 'r', (err, fd) => {
                         if (err) {
                             if (err.code === 'ENOENT') {
@@ -190,7 +190,9 @@ app.post('/admin/createApikey', (req, res) => {
         } else {
             res.status(200).send(apiKey);
             // append the api key to a file called apikeys
-            fs.appendFileSync('./apikeys.txt', `${apiKey} ${username} ${email}\n`);
+            let username2 = req.body.username.replace(/[^a-zA-Z0-9]/g, ''); // clean the input
+            let email2 = req.body.email.replace(/[^a-zA-Z0-9@.]/g, '');
+            fs.appendFileSync('./apikeys.txt', `${apiKey} ${username2} ${email2}\n`);
             // add the api key to a firebase database
             createUser(apiKey, email, username, adminKey);
         }
