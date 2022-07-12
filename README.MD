@@ -46,3 +46,13 @@ API: Repl.it ?
 - [ ] Auth with API keys
 - [ ] Add a admin panel
 
+## TODO (BUGS)
+
+- [ ] const extension = req.files.file.name.split('.').pop(); this gon break on .tar.gz or on .js.map // use path.extname
+- [ ] remove express-fileupload
+- [ ] try to use promisified fs apis
+- [ ] fs.appendFileSync('./apikeys.txt', ${apiKey} ${username} ${email}\n); this could pose as some weird risk  / if I put \n / into the text / it might parse as newline
+- [ ]  I recommend using headers/cookies / instead of body based auth / and just create an admin auth middleware
+- [ ] use hashed admin secrets not plain text
+- [X] Replace these username === '' with username.trim() === ''
+- [ ] do type checks
