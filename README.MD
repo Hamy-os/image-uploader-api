@@ -8,6 +8,8 @@ Backend: Node.js / Express
 FrontEnd: Next.js / tailwindcss
 Database: Firestore
 Authentication: Firebase
+Hosting: Vercel
+API: Repl.it ?
 
 ## Structure of the project
 
@@ -33,7 +35,10 @@ Authentication: Firebase
 
 ## TODO (ADMIN)
 
-- [ ] Create a POST route /admin/createApi that takes a admin key, username, email and creates a api key for the user and saves it to a database (firestore)
-- [ ] Create a GET route /admin/listKeys that lists every api key, who owns it and when it was created.
-- [ ] Create a POST route /admin/deleteKey that takes a api key and deletes it from the database (firestore)
-- [ ] Create
+- [X] Create a POST route /admin/createApikey that takes a admin key, username, email and creates a api key for the user and saves it to a database (firestore)
+- [X] Create a GET route /admin/listKeys that lists every api key, who owns it and when it was created.
+- [X] Create a POST route /admin/deleteKey that takes a api key and deletes it from the database (firestore)
+
+## TODO (QOL)
+
+- [ ] Upload images to a firestore bucket

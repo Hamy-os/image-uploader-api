@@ -8,30 +8,43 @@ const _ = require('lodash');
 const port = 80;
 const fs = require('fs');
 const baseurl = "http://localhost:80/uploads/";
+const fires = require('firebase-admin');
+const serviceAccount = require('./servicekey.json');
+const e = require('express');
+
+fires.initializeApp({credential: fires.credential.cert(serviceAccount)});
+
+const db = fires.firestore();
+const usersDb = db.collection('users');
+
+async function createUser(apikey, email, username, adminKey) {
+    usersDb.doc().set({
+        apikey: apikey,
+        email: email,
+        username: username,
+        dateAdded: Date.now(),
+        admin: adminKey
+    });
+}
+
 
 // enable files upload
-app.use(fileUpload(
-    {
-        createParentPath: true
-    }
-));
+app.use(fileUpload({createParentPath: true}));
 
-//add other middleware
+// add other middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
 
-app.listen(port, () => 
-    console.log(`App is listening on port ${port}. http://localhost:${port}`)
-);
+app.listen(port, () => console.log(`App is listening on port ${port}. http://localhost:${port}`));
 
 app.post('/upload', async (req, res) => {
     try {
-        if(!req.files) {
+        if (!req.files) {
             res.status(400).send('No files were uploaded.'); // send a 400 error with a message if no file is uploaded
         } else {
-            const buffer = req.files.file.data;  // save the buffer as an image
+            const buffer = req.files.file.data; // save the buffer as an image
             const image = Buffer.from(buffer, 'base64'); // convert the buffer to an image
             const filename = _.random(100000000, 999999999).toString(); // create a random 8 digit filename
             const extension = req.files.file.name.split('.').pop(); // add the extension to the filename
@@ -40,7 +53,7 @@ app.post('/upload', async (req, res) => {
                 if (err) {
                     if (err.code === 'ENOENT') {
                         fs.writeFileSync(`./uploads/${name}`, image); // create the file
-                        res.status(200).send(baseurl + name); //send response with the url and the status code
+                        res.status(200).send(baseurl + name); // send response with the url and the status code
                         return;
                     }
                     throw err;
@@ -49,12 +62,13 @@ app.post('/upload', async (req, res) => {
                     const filename2 = _.random(100000000, 999999999).toString(); // create a random 8 digit filename
                     const name2 = filename2 + '.' + extension // combine the two
                     fs.writeFileSync(`./uploads/${name2}`, image); // create the file
-                    res.status(200).send(baseurl + name2); //send response with the url and the status code
+                    res.status(200).send(baseurl + name2); // send response with the url and the status code
                 } finally {
                     fs.close(fd, (err) => {
                         if (err) 
                             throw err;
                         
+
                     });
                 }
             });
@@ -74,8 +88,7 @@ app.get('/raw/:name', (req, res) => {
     res.sendFile(__dirname + `/uploads/${name}`);
 });
 
-app.get('/list', (req, res) => {
-    // return a json of every file in the uploads directory, their name, their size and their url
+app.get('/list', (req, res) => { // return a json of every file in the uploads directory, their name, their size and their url
     fs.readdir('./uploads', (err, files) => {
         if (err) {
             res.status(500).send(err);
@@ -103,7 +116,64 @@ app.post('/delete', (req, res) => {
         } else {
             res.status(200).send('File deleted');
         }
+    });
+});
+
+// Create a POST route /admin/createApikey that takes a admin key, username, email and creates a api key for the user and saves it to a database (firestore)
+app.post('/admin/createApikey', (req, res) => {
+    const adminKey = req.body.adminKey;
+    const username = req.body.username;
+    const email = req.body.email;
+    const str1 = _.random(1000000000000000000, 9999999999999999999).toString();
+    const str2 = _.shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789').slice(0, 10).join('');
+    const apiKey = str1 + str2;
+    if (adminKey === 'admin') {
+        if (! username || ! email) {
+            res.status(400).send('No username or email provided');
+        }
+        if (username === '' || email === '') {
+            res.status(400).send('Invalid username or email');
+        } else {
+            res.status(200).send(apiKey);
+            // append the api key to a file called apikeys
+            fs.appendFileSync('./apikeys.txt', `${apiKey} ${username} ${email}\n`);
+            // add the api key to a firebase database
+            createUser(apiKey, email, username, adminKey);
+        }
+    } else {
+        res.status(400).send('Invalid admin key');
     }
-    );
-}
-);
+})
+
+// Create a GET route /admin/listKeys that lists every api key, who owns it and when it was created.
+app.get('/admin/listKeys', (req, res) => {
+    usersDb.get().then(snapshot => {
+        const users = snapshot.docs.map(doc => {
+            return {id: doc.id, data: doc.data()}
+        }).sort((a, b) => {
+            return a.data.dateAdded > b.data.dateAdded;
+        }).reverse();
+        res.json(users);
+    }).catch(err => {
+        res.status(500).send(err);
+    });
+})
+
+// Create a POST route /admin/deleteKey that takes a api key and deletes it from the database (firestore)
+app.post('/admin/deleteKey', (req, res) => {
+    const adminKey = req.body.adminKey;
+    const apiKey = req.body.apiKey;
+    if (adminKey === 'admin') {
+        if (! apiKey || apiKey === '') {
+            res.status(400).send('No api key provided');
+        } else {
+            usersDb.doc(apiKey).delete().then(() => {
+                res.status(200).send('Key deleted');
+            }).catch(err => {
+                res.status(500).send(err);
+            });
+        }
+    } else {
+        res.status(400).send('Invalid admin key');
+    }
+});
