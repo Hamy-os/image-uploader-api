@@ -56,49 +56,69 @@ async function uploadImage(filename, ) {
 // enable files upload
 app.use(fileUpload({createParentPath: true}));
 
+async function checkKey(apikey) {
+    const user = await usersDb.where('apikey', '==', apikey).get();
+    if (user.empty) {
+        console.log('Invalid API key');
+        return false;
+    }
+    console.log('Valid API key');
+    return true;
+}
 // add other middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
 
-app.listen(port, () => console.log(`App is listening on port ${port}. http://localhost:${port}`));
+app.listen(port, () => console.log(`App is listening on port ${port}.`));
 
 app.post('/upload', async (req, res) => {
     try {
-        if (!req.files) {
-            res.status(400).send('No files were uploaded.'); // send a 400 error with a message if no file is uploaded
-        } else {
-            const buffer = req.files.file.data; // save the buffer as an image
-            const image = Buffer.from(buffer, 'base64'); // convert the buffer to an image
-            const filename = _.random(100000000, 999999999).toString(); // create a random 8 digit filename
-            const extension = req.files.file.name.split('.').pop(); // add the extension to the filename
-            const name = filename + '.' + extension // combine the two
-            fs.open('./uploads/' + name, 'r', (err, fd) => {
-                if (err) {
-                    if (err.code === 'ENOENT') {
-                        fs.writeFileSync(`./uploads/${name}`, image); // create the file
-                        uploadImage(name)
-                        res.status(200).send(baseurl + name + query); // send response with the url and the status code
-                        return;
-                    }
-                    throw err;
-                }
-                try {
-                    const filename2 = _.random(100000000, 999999999).toString(); // create a random 8 digit filename
-                    const name2 = filename2 + '.' + extension // combine the two
-                    fs.writeFileSync(`./uploads/${name2}`, image); // create the file
-                    uploadImage(name2)// upload the file to firestore
-                    res.status(200).send(baseurl + name + query); // send response with the url and the status code
-                } finally {
-                    fs.close(fd, (err) => {
-                        if (err) 
+        if (!req.body.apiKey) {
+            res.status(400).send('No API key provided');
+        }
+        else {
+            console.log("API key provided");
+            if (await checkKey(req.body.apiKey)) {
+                if (!req.files) {
+                    res.status(400).send('No files were uploaded.'); // send a 400 error with a message if no file is uploaded
+                } else {
+                    const buffer = req.files.file.data; // save the buffer as an image
+                    const image = Buffer.from(buffer, 'base64'); // convert the buffer to an image
+                    const filename = _.random(100000000, 999999999).toString(); // create a random 8 digit filename
+                    const extension = req.files.file.name.split('.').pop(); // add the extension to the filename
+                    const name = filename + '.' + extension // combine the two
+                    fs.open('./uploads/' + name, 'r', (err, fd) => {
+                        if (err) {
+                            if (err.code === 'ENOENT') {
+                                fs.writeFileSync(`./uploads/${name}`, image); // create the file
+                                uploadImage(name)
+                                res.status(200).send(baseurl + name + query); // send response with the url and the status code
+                                return;
+                            }
                             throw err;
-                        
-
+                        }
+                        try {
+                            const filename2 = _.random(100000000, 999999999).toString(); // create a random 8 digit filename
+                            const name2 = filename2 + '.' + extension // combine the two
+                            fs.writeFileSync(`./uploads/${name2}`, image); // create the file
+                            uploadImage(name2)// upload the file to firestore
+                            res.status(200).send(baseurl + name + query); // send response with the url and the status code
+                        } finally {
+                            fs.close(fd, (err) => {
+                                if (err) 
+                                    throw err;
+                                
+        
+                            });
+                        }
                     });
                 }
-            });
+            }    
+            else {
+                res.status(400).send("Invalid API key");
+            }
         }
     } catch (err) {
         res.status(500).send(err); // send the error back with the status code
@@ -116,6 +136,7 @@ app.get('/raw/:name', (req, res) => {
 });
 
 app.get('/list', (req, res) => { // return a json of every file in the uploads directory, their name, their size and their url
+    
     fs.readdir('./uploads', (err, files) => {
         if (err) {
             res.status(500).send(err);
