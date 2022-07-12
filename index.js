@@ -136,7 +136,7 @@ app.get('/raw/:name', (req, res) => {
 
 app.get('/list', (req, res) => { // return a json of every file in the uploads directory, their name, their size and their url
     const adminKey = req.body.adminKey;
-    if (adminKey === process.env.adminKey) {
+    if (adminKey.trim() === process.env.adminKey) {
         fs.readdir('./uploads', (err, files) => {
             if (err) {
                 res.status(500).send(err);
@@ -185,7 +185,7 @@ app.post('/admin/createApikey', (req, res) => {
         if (! username || ! email) {
             res.status(400).send('No username or email provided');
         }
-        if (username === '' || email === '') {
+        if (username.trim() === '' || email.trim() === '') {
             res.status(400).send('Invalid username or email');
         } else {
             res.status(200).send(apiKey);
@@ -201,7 +201,7 @@ app.post('/admin/createApikey', (req, res) => {
 
 // Create a GET route /admin/listKeys that lists every api key, who owns it and when it was created.
 app.get('/admin/listKeys', (req, res) => {
-    if (req.body.adminKey === process.env.adminKey) {
+    if (req.body.adminKey.trim() === process.env.adminKey) {
         usersDb.get().then(snapshot => {
             const users = snapshot.docs.map(doc => {
                 return {id: doc.id, data: doc.data()}
@@ -222,8 +222,8 @@ app.get('/admin/listKeys', (req, res) => {
 app.post('/admin/deleteKey', (req, res) => {
     const adminKey = req.body.adminKey;
     const apiKey = req.body.apiKey;
-    if (adminKey === process.env.adminKey) {
-        if (! apiKey || apiKey === '') {
+    if (adminKey.trim() === process.env.adminKey) {
+        if (! apiKey || apiKey.trim() === '') {
             res.status(400).send('No api key provided');
         } else {
             usersDb.doc(apiKey).delete().then(() => {
