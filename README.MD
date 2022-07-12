@@ -53,6 +53,6 @@ API: Repl.it ?
 - [ ] try to use promisified fs apis
 - [X] fs.appendFileSync('./apikeys.txt', ${apiKey} ${username} ${email}\n); this could pose as some weird risk  / if I put \n / into the text / it might parse as newline
 - [ ]  I recommend using headers/cookies / instead of body based auth / and just create an admin auth middleware
-- [ ] use hashed admin secrets not plain text
+- [X] use hashed admin secrets not plain text
 - [X] Replace these username === '' with username.trim() === ''
 - [ ] do type checks

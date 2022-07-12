@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const bodyParser = require('body-parser');
 require('dotenv').config()
+const hash = require('hash-sum');
 const morgan = require('morgan');
 const _ = require('lodash');
 const port = 80;
@@ -41,7 +42,8 @@ async function createUser(apikey, email, username, adminKey) {
         email: email,
         username: username,
         dateAdded: Date.now(),
-        admin: adminKey
+        admin: adminKey,
+        adminHash: hash(adminKey)
     });
 }
 
@@ -136,7 +138,7 @@ app.get('/raw/:name', (req, res) => {
 
 app.get('/list', (req, res) => { // return a json of every file in the uploads directory, their name, their size and their url
     const adminKey = req.body.adminKey;
-    if (adminKey.trim() === process.env.adminKey) {
+    if (hash(adminKey.trim()) === hash(process.env.adminKey)) {
         fs.readdir('./uploads', (err, files) => {
             if (err) {
                 res.status(500).send(err);
@@ -181,7 +183,7 @@ app.post('/admin/createApikey', (req, res) => {
     const str1 = _.random(1000000000000000000, 9999999999999999999).toString();
     const str2 = _.shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789').slice(0, 10).join('');
     const apiKey = str1 + str2;
-    if (adminKey === process.env.adminKey) {
+    if (hash(adminKey) === hash(process.env.adminKey)) {
         if (! username || ! email) {
             res.status(400).send('No username or email provided');
         }
@@ -190,7 +192,7 @@ app.post('/admin/createApikey', (req, res) => {
         } else {
             res.status(200).send(apiKey);
             // append the api key to a file called apikeys
-            let username2 = req.body.username.replace(/[^a-zA-Z0-9]/g, ''); // clean the input
+            let username2 = req.body.username.replace(/\s/g, ''); // clean the input
             let email2 = req.body.email.replace(/[^a-zA-Z0-9@.]/g, '');
             fs.appendFileSync('./apikeys.txt', `${apiKey} ${username2} ${email2}\n`);
             // add the api key to a firebase database
@@ -203,7 +205,7 @@ app.post('/admin/createApikey', (req, res) => {
 
 // Create a GET route /admin/listKeys that lists every api key, who owns it and when it was created.
 app.get('/admin/listKeys', (req, res) => {
-    if (req.body.adminKey.trim() === process.env.adminKey) {
+    if (hash(req.body.adminKey.trim()) === hash(process.env.adminKey)) {
         usersDb.get().then(snapshot => {
             const users = snapshot.docs.map(doc => {
                 return {id: doc.id, data: doc.data()}
@@ -224,7 +226,7 @@ app.get('/admin/listKeys', (req, res) => {
 app.post('/admin/deleteKey', (req, res) => {
     const adminKey = req.body.adminKey;
     const apiKey = req.body.apiKey;
-    if (adminKey.trim() === process.env.adminKey) {
+    if (hash(adminKey.trim()) === hash(process.env.adminKey)) {
         if (! apiKey || apiKey.trim() === '') {
             res.status(400).send('No api key provided');
         } else {
