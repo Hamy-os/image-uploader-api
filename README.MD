@@ -41,4 +41,5 @@ API: Repl.it ?
 
 ## TODO (QOL)
 
-- [ ] Upload images to a firestore bucket
+- [X] Upload images to a firestore bucket
+- [ ] Cleanup code 

@@ -3,14 +3,31 @@ const app = express();
 const fileUpload = require('express-fileupload');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+require('dotenv').config()
 const morgan = require('morgan');
 const _ = require('lodash');
 const port = 80;
 const fs = require('fs');
-const baseurl = "http://localhost:80/uploads/";
+const baseurl = `https://firebasestorage.googleapis.com/v0/b/imageuploader-1be3a.appspot.com/o/images%2F`;
+const query = "?alt=media&token=dd693d8a-65cc-4ba9-874e-964cdcceb663"
+const { getStorage, ref, uploadString  } = require("firebase/storage")
+const { initializeApp } = require("firebase/app")
 const fires = require('firebase-admin');
 const serviceAccount = require('./servicekey.json');
-const e = require('express');
+function base64_encode(file) {
+    var contents = fs.readFileSync(file).toString('base64');
+    return contents;
+}
+const firebaseConfig = {
+    apiKey: process.env.apikey,
+    authDomain: process.env.authDomain,
+    projectId: process.env.projectId,
+    storageBucket: process.env.storageBucket,
+    messagingSenderId: process.env.messagingSenderId,
+    appId: process.env.appId,
+    measurementId: process.env.measurementId
+};
+
 
 fires.initializeApp({credential: fires.credential.cert(serviceAccount)});
 
@@ -27,7 +44,15 @@ async function createUser(apikey, email, username, adminKey) {
     });
 }
 
-
+async function uploadImage(filename, ) {
+    const app = initializeApp(firebaseConfig);
+    const storage = getStorage(); // Create a root reference  
+    const storageRef = ref(storage, `images/${filename}`);
+    const base64str = base64_encode(`./uploads/${filename}`);
+    uploadString(storageRef, base64str, 'base64').then((snapshot) => {
+        console.log('Uploaded the image!');
+    });
+}
 // enable files upload
 app.use(fileUpload({createParentPath: true}));
 
@@ -53,7 +78,8 @@ app.post('/upload', async (req, res) => {
                 if (err) {
                     if (err.code === 'ENOENT') {
                         fs.writeFileSync(`./uploads/${name}`, image); // create the file
-                        res.status(200).send(baseurl + name); // send response with the url and the status code
+                        uploadImage(name)
+                        res.status(200).send(baseurl + name + query); // send response with the url and the status code
                         return;
                     }
                     throw err;
@@ -62,7 +88,8 @@ app.post('/upload', async (req, res) => {
                     const filename2 = _.random(100000000, 999999999).toString(); // create a random 8 digit filename
                     const name2 = filename2 + '.' + extension // combine the two
                     fs.writeFileSync(`./uploads/${name2}`, image); // create the file
-                    res.status(200).send(baseurl + name2); // send response with the url and the status code
+                    uploadImage(name2)// upload the file to firestore
+                    res.status(200).send(baseurl + name + query); // send response with the url and the status code
                 } finally {
                     fs.close(fd, (err) => {
                         if (err) 
